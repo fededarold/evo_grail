@@ -4,7 +4,7 @@ Created on Wed Oct 25 10:43:33 2023
 
 @author: darol
 """
-
+from multiprocessing import set_start_method
 
 from multiprocessing import Pool
 from multiprocessing.managers import NamespaceProxy, BaseManager
@@ -137,7 +137,7 @@ def get_individual_xy_grid(feature_x: float, feature_y: float,
 #def main_fun(tot_epochs: int, epoch_increase=1, iterations=10):
 if __name__ == "__main__":
     
-    multiprocessing.set_st
+    set_start_method("spawn")
     
     # Tlist = [0.1, 0.01, 0.9, 0.05, 0.1] #, 0.05, 0.01]
     # # iterations = [100, 1000, 100000]
