@@ -15,6 +15,7 @@ class GoalManager(object):
     def __init__(self):
         
         self.softmax_temp=None
+        self.beta_val=None
         
         self.current_goal = None
         self.goals_list = []
@@ -66,11 +67,12 @@ class GoalManager(object):
         competence = max(0, sum1 / float(pt) - sum2 / float(pt))
         self.goals_competence[goal_id][context] = competence
 
-    def update_q_values(self, goal_id, context, beta=0.3):
+    def update_q_values(self, goal_id, context): #, beta=0.3):
         """
         The value of each goal g is updated through an EMA of the CB-IM signal
         q(k_t,s_t) = q(k_t, s_t) + beta * (ir(k_{t+1}) - q(k_t, s_t))
         """
+        beta = self.beta_val      
         self.q_values[goal_id][context] = self.q_values[goal_id][context] + beta * (
                 self.goals_competence[goal_id][context] - self.q_values[goal_id][context])
 
@@ -94,3 +96,9 @@ class GoalManager(object):
         
     def get_softmax_temp(self):
         return self.softmax_temp
+    
+    def set_beta_val(self, beta):
+        self.beta_val = beta
+        
+    def get_beta_val(self):
+        return self.beta_val

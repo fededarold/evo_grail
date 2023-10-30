@@ -72,6 +72,7 @@ class MOTIVEN(object):
         self.c_epoch = None
         
         self.agent_id = None
+        self.agent_epoch = None
         
         # np.random.set_state(1)
         np.random.seed(1)
@@ -94,6 +95,7 @@ class MOTIVEN(object):
         self.it_trial = 0  # Number of iterations before obtaining reward or ending the trial
         self.it_blind = 0  # Number of iterations the Intrinsic blind motivation is active
         self.n_trials = 0  # Number of trial of the experiment
+        self.tot_trials = 0
         self.n_epochs = 0  # Number of epoch of the experiment
 
         # IMPORTANT: DATA TO CHANGE IN BETWEEN EXPERIMENTS
@@ -279,12 +281,12 @@ class MOTIVEN(object):
         action_data = InfoDiscrete.range_scaler(action_data, 
                                                 min_bound=-90.0, 
                                                 max_bound=90.0)
-        goal_data = np.zeros(len(goal_data_string))
+        self.goal_data = np.zeros(len(goal_data_string))
         for i in range(1,7):
             g = "ball_" + str(i)
-            goal_data[np.where(np.array(goal_data_string)==g)] = i
+            self.goal_data[np.where(np.array(goal_data_string)==g)] = i
             
-        self.entropy_goal = InfoDiscrete.entropy(data=goal_data, 
+        self.entropy_goal = InfoDiscrete.entropy(data=self.goal_data, 
                                                  n_bins=6, 
                                                  states_range=[1,6],
                                                  normalize=False)
@@ -416,7 +418,8 @@ class MOTIVEN(object):
                 corr_type=self.corr_type,
                 intrinsic_memory=self.intrinsic_memory.get_contents()
             )
-            
+        
+           
         self.get_data()    
       
             # self.n_epochs += 1      
@@ -429,6 +432,7 @@ class MOTIVEN(object):
         if self.it_trial >= self.max_it_trial or self.simulator.get_goals_state() != self.state_t or self.end_trial:  # Antitraza
             end_trial = True
             self.n_trials += 1
+            self.tot_trials += 1
             self.it_trial = 0
             self.end_trial = False
         if self.n_trials >= self.max_trials or (self.simulator.get_reward() and not self.scenario_mdp) or (
@@ -489,6 +493,7 @@ class MOTIVEN(object):
         if self.it_trial >= self.max_it_trial or self.simulator.get_goals_state() != self.state_t or self.end_trial:  # Antitraza
             end_trial = True
             self.n_trials += 1
+            self.tot_trials += 1
             self.it_trial = 0
             self.end_trial = False
         if (self.n_trials >= 1 and self.evaluating_performance) or (
@@ -1024,6 +1029,12 @@ class MOTIVEN(object):
         
     def get_softmax_temperature(self):
         return self.goal_manager.get_softmax_temp()
+    
+    def set_beta_val(self, beta):
+        self.goal_manager.set_beta_val(beta)
+        
+    def get_beta_val(self):
+        return self.goal_manager.get_beta_val()
     
     
     @classmethod
