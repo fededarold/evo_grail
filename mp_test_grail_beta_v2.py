@@ -314,7 +314,7 @@ if __name__ == "__main__":
         print(c_iteration)        
         if MP:
             for i in range(0,len(grails),N_POOLS):
-                print(i)
+                #print(i)
                 grails[i:i+N_POOLS], current_epoch = main_fun_MP(grails[i:i+N_POOLS], 
                                                                 current_epoch=current_epoch+1,     
                                                                 epoch_increase=TEST_EVERY,
