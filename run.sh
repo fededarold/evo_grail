@@ -2,7 +2,7 @@
 #export OMP_NUM_THREADS=1
 # export OMP_SCHEDULE=STATIC
 # export OMP_PROC_BIND=CLOSE
-python3 mp_test_grail_v4.py 
+python3 mp_test_grail_beta_v2.py 
 # k=1
 # for i in {10..14}
 # do
