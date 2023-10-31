@@ -33,14 +33,10 @@ WORKDIR /workspace/
 
 #RUN if [ "python:${PYTHON_VERSION}" = "python:3.6.15" ] ; then pip install .[box2d,classic_control,toy_text,other] pytest=="7.0.1" --no-cache-dir; else pip install .[testing] --no-cache-dir; fi
 RUN pip install gym[all]
-RUN pip install gym[accept-rom-license]
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-RUN pip install pyyaml
 
-COPY . /workspace/
-#CMD ["bash run.sh"]
-
-#CMD ["python3","-u","main.py"]
+COPY ./ /workspace/
+CMD ["python3","-u","/workspace/main.py"]
 #FROM continuumio/miniconda3
 
 # SET BASH AS CURRENT SHELL
