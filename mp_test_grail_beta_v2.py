@@ -215,9 +215,9 @@ if __name__ == "__main__":
     
     set_start_method("spawn")
         
-    TEST_EVERY_INITIAL_TRAINING = 5
-    N_ITERATIONS = 3
-    TEST_EVERY = 5
+    TEST_EVERY_INITIAL_TRAINING = 30
+    N_ITERATIONS = 100
+    TEST_EVERY = 10
     
     MP = True
  
@@ -226,8 +226,8 @@ if __name__ == "__main__":
     random.seed(1)
     np.random.seed(1)
 
-    N_AGENTS = 4
-    N_POOLS = 4
+    N_AGENTS = 10
+    N_POOLS = 20
     
     uniform = {"initialization": {"lower bound": 0.01,
                                   "upper bound": 0.99},
