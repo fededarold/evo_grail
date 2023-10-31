@@ -14,15 +14,15 @@ from multiprocessing.managers import NamespaceProxy, BaseManager
 import types
 import numpy as np
 import time
-import robo.neuroevolution as ga
-import robo.randomizer as rng
+import neuroevolution as ga
+import randomizer as rng
 import random
 
-from grail.motiven_bandit_ale_MP import MOTIVEN
+from motiven_bandit_ale_MP import MOTIVEN
 
 import copy
 
-from grail.info_teory_disc import InfoDiscrete
+from info_teory_disc import InfoDiscrete
 from numpy.matlib import repmat
 
 
