@@ -35,6 +35,8 @@ WORKDIR /workspace/
 RUN pip install gym[all]
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 RUN pip install scipy
+RUN -m pip install numpy
+
 
 COPY ./ /workspace/
 CMD ["python3","-u","/workspace/main.py"]
