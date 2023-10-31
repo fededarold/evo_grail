@@ -25,61 +25,14 @@ import copy
 from grail.info_teory_disc import InfoDiscrete
 from numpy.matlib import repmat
 
-uniform = {"initialization": {"lower bound": 0.01,
-                              "upper bound": 0.99},
-            "mutation": {"lower bound": -0.01,
-                          "upper bound": 0.01},
-            "limits": {"min value": 0.01, 
-                       "max value": 0.99}}
 
-
-class Dummy:
-    def __init__(self, name, method):
-        self.name = name
-        self.method = method
-
-    def get(self, *args, **kwargs):
-        return self.method(self.name, args, kwargs)
-
-
-class ObjProxy(NamespaceProxy):
-    """Returns a proxy instance for any user defined data-type. The proxy instance will have the namespace and
-    functions of the data-type (except private/protected callables/attributes). Furthermore, the proxy will be
-    pickable and can its state can be shared among different processes. """
-
-    def __getattr__(self, name):
-        result = super().__getattr__(name)
-        if isinstance(result, types.MethodType):
-            return Dummy(name, self._callmethod).get
-        return result
-
-class AgentGRAIL(ga.AgentBase):
+# class EvoGRAIL_V1():
     
-    def __init__(self):
-        super(AgentGRAIL, self).__init__(genome_size=1, genome_data_type="python", random_distribution="uniform")
-        self.grail = MOTIVEN()
-        # self._genome_size = 1
-        # self._genome_data_type = "python"
-        # self._random_distribution = "uniform"   
+#     def __init__(self):
         
-        
-    def run_agent(self):
-        self.grail.main()
-        
-    @classmethod
-    def create(cls, *args, **kwargs):
-        # Register class
-        class_str = cls.__name__
-        BaseManager.register(class_str, cls, ObjProxy, exposed=tuple(dir(cls)))
-        # Start a manager process
-        manager = BaseManager()
-        manager.start()
 
-        # Create and return this proxy instance. Using this proxy allows sharing of state between processes.
-        inst = eval("manager.{}(*args, **kwargs)".format(class_str))
-        return inst
 
-def main_fun(G, current_epoch: int, epoch_increase=10): #, iterations=10):
+def main_fun_MP(G, current_epoch: int, n_pools: int, epoch_increase=10): #, iterations=10):
     
     N=len(G)
     max_epoch = current_epoch + epoch_increase
@@ -87,7 +40,7 @@ def main_fun(G, current_epoch: int, epoch_increase=10): #, iterations=10):
         G[i].max_epochs = max_epoch
         
         
-    with Pool(N) as pool:     
+    with Pool(n_pools) as pool:     
         
         results = []
         for i in range(N):  # this loop should be ran in multiprocess
@@ -100,6 +53,16 @@ def main_fun(G, current_epoch: int, epoch_increase=10): #, iterations=10):
     
     pool.close()
     pool.join()
+        
+    return G, max_epoch
+
+def main_fun(G, current_epoch: int, epoch_increase=10):
+    
+    N=len(G)
+    max_epoch = current_epoch + epoch_increase
+    for i in range(N):
+        G[i].max_epochs = max_epoch
+        G[i].main()
         
     return G, max_epoch
 
@@ -121,45 +84,110 @@ def get_individual_xy_grid(feature_x: float, feature_y: float,
         
     return idx, idy
 
-# self.x = (feature_x_max - feature_x_min) / self.grid.shape[0]
-# self.y = (feature_y_max - feature_y_min) / self.grid.shape[1]
-
-
-# def place_individuals_in_map(new_individuals, map_grid,
-#                              adaptive_x=False, adaptive_y=False):
-
-#     grid_x = map_grid.shape[0] 
-#     grid_y = map_grid.shape[1]
+def init_population(n_agents, randomizer, parallel_execution=True):
     
-#     for i in range(len(individuals)):
-#         x, y = get_individual_xy_grid(feature_x, feature_y, feature_x_min, feature_x_max, feature_y_min, feature_y_max)
+    genome_list = []
+    genome = [0, 0]
+    for i in range(n_agents):
+        genome_list.append(randomizer.mutate(genome=copy.deepcopy(genome),
+                                             param_A=randomizer.initialization_param_A, 
+                                             param_B=randomizer.initialization_param_B))
+        
+    grails_initial_batch = np.empty((n_agents), dtype=object)
+    for i in range(n_agents):
+        if parallel_execution:
+            grails_initial_batch[i] = MOTIVEN.create()
+        else:
+            grails_initial_batch[i] = MOTIVEN()
+        grails_initial_batch[i].set_softmax_temperature(genome_list[i][0])
+        grails_initial_batch[i].goal_manager.beta_val = genome_list[i][1]
+        grails_initial_batch[i].agent_id = i
+        grails_initial_batch[i].agent_epoch = 0
+        grails_initial_batch[i].init_main()
+        print("init grail: " + str(i))
+    print("done")    
+    
+    return grails_initial_batch
 
 
-#def main_fun(tot_epochs: int, epoch_increase=1, iterations=10):
+def place_individuals_in_grid(grails):
+    
+    grails_map_parents = np.empty((10,10), dtype=object)
+    for i in range(len(grails)):
+        I_scaled = InfoDiscrete.range_scaler(grails[i].I_sensors_action,
+                                             I_lower_bound, I_upper_bound)
+        
+        x, y = get_individual_xy_grid(feature_x=grails[i].entropy_goal, 
+                                      feature_y=I_scaled)
+        
+        if grails_map_parents[x][y] is None:
+            grails_map_parents[x][y] = copy.deepcopy(grails[i])
+        else:
+            if grails_map_parents[x][y].reward_test < grails[i].reward_test:
+               grails_map_parents[x][y] = copy.deepcopy(grails[i])
+            elif grails_map_parents[x][y].reward == grails[i].reward:
+                if np.random.rand() > 0.5:
+                    grails_map_parents[x][y] = copy.deepcopy(grails[i])
+
+    return grails_map_parents
+
+
+def reproduce(grails_map, randomizer, c_iteration):
+    
+    grails = []
+    # do parents first
+    for i in range(grails_map.shape[0]):
+        for j in range(grails_map.shape[1]):            
+            if grails_map[i][j] is not None:                
+                grails.append(copy.deepcopy(grails_map[i][j]))       # maybe we do not need deepcopy
+                
+    # do offspring
+    for i in range(grails_map.shape[0]):
+        for j in range(grails_map.shape[1]):            
+            if grails_map[i][j] is not None:           
+                
+                grails.append(copy.deepcopy(grails_map[i][j]))
+                
+                genome_temp = grails[-1].get_softmax_temperature()
+                genome_temp = randomizer.mutate(genome=[genome_temp],
+                                               param_A=randomizer.mutation_param_A, 
+                                               param_B=randomizer.mutation_param_B)
+                grails[-1].set_softmax_temperature(genome_temp[0])
+                
+                genome_beta = grails[-1].goal_manager.beta_val
+                genome_beta = randomizer.mutate(genome=[genome_beta],
+                                               param_A=randomizer.mutation_param_A, 
+                                               param_B=randomizer.mutation_param_B)
+                grails[-1].goal_manager.beta_val = (genome_beta[0])
+                
+                grails[-1].agent_epoch = c_iteration
+                
+    return grails
+    
+
+
 if __name__ == "__main__":
     
     set_start_method("spawn")
-    
-    # Tlist = [0.1, 0.01, 0.9, 0.05, 0.1] #, 0.05, 0.01]
-    # # iterations = [100, 1000, 100000]
-    # N = len(Tlist)
-    # G = []
-    
-    TEST_EVERY_INITIAL_TRAINING = 20
+        
+    TEST_EVERY_INITIAL_TRAINING = 30
     N_ITERATIONS = 10
-    c_iteration = 0
-    TEST_EVERY = 20
+    TEST_EVERY = 30
+    
+    MP = False
  
-    t_0 = time.time()
+    # t_0 = time.time()
     
     random.seed(1)
     np.random.seed(1)
 
-    n_agents = 10
+    N_AGENTS = 4
+    N_POOLS = 4
+    
     uniform = {"initialization": {"lower bound": 0.01,
                                   "upper bound": 0.99},
-                "mutation": {"lower bound": -0.1,
-                              "upper bound": 0.1},
+                "mutation": {"lower bound": -0.3,
+                              "upper bound": 0.3},
                 "limits": {"min value": 0.01, 
                            "max value": 0.99}}
     
@@ -171,38 +199,32 @@ if __name__ == "__main__":
                                         data_type="python", 
                                         params=uniform)
 
-    genome = [0]
-    genome_list = []
-    for i in range(n_agents):
-        genome_list.append(randomizer.mutate(genome=copy.deepcopy(genome),
-                                             param_A=randomizer.initialization_param_A, 
-                                             param_B=randomizer.initialization_param_B))
     
-    grails_map_parents = np.empty((10,10), dtype=object)
+    
+    # grails_map_parents = np.empty((10,10), dtype=object)
     # grails_map_offspring = np.empty((10,10), dtype=object)
-    map_spreading = np.zeros((N_ITERATIONS,10,10))
+    map_spreading = np.empty((N_ITERATIONS,10,10), dtype=object)
     map_spreading[:] = np.nan
     map_reward = np.zeros((N_ITERATIONS,10,10))
     map_reward[:] = np.nan
     
-    grails_initial_batch = np.empty((n_agents), dtype=object)
-    for i in range(n_agents):
-        grails_initial_batch[i] = MOTIVEN.create()
-        grails_initial_batch[i].set_softmax_temperature(genome_list[i])
-        grails_initial_batch[i].agent_id = i
-        grails_initial_batch[i].agent_epoch = c_iteration
-        grails_initial_batch[i].init_main()
-        print("init grail: " + str(i))
-    print("done")    
+    grails_initial_batch = init_population(n_agents=N_AGENTS, randomizer=randomizer, 
+                                           parallel_execution=MP)
     
+    if MP:
+        grails_initial_batch, current_epoch = main_fun_MP(grails_initial_batch, 
+                                                       current_epoch=0,     
+                                                       epoch_increase=TEST_EVERY_INITIAL_TRAINING,
+                                                       n_pools = N_POOLS) 
+    else:
+        grails_initial_batch, current_epoch = main_fun(grails_initial_batch, 
+                                                       current_epoch=0,     
+                                                       epoch_increase=TEST_EVERY_INITIAL_TRAINING) 
     
-    grails_initial_batch, current_epoch = main_fun(grails_initial_batch, 
-                                                   current_epoch=0,     
-                                                   epoch_increase=TEST_EVERY_INITIAL_TRAINING) 
-    
+        
     #get min-max values of the necessary BD dimensions
     I_values = []
-    for i in range(n_agents):
+    for i in range(len(grails_initial_batch)):
         I_values.append(grails_initial_batch[i].I_sensors_action)
     I_upper_bound = max(I_values)
     I_lower_bound = min(I_values)
@@ -210,42 +232,45 @@ if __name__ == "__main__":
     I_upper_history.append(I_upper_bound)
     I_lower_history.append(I_lower_bound)
     
-    for i in range(n_agents):
-        I_scaled = InfoDiscrete.range_scaler(grails_initial_batch[i].I_sensors_action,
-                                             I_lower_bound, I_upper_bound)
-        
-        x, y = get_individual_xy_grid(feature_x=grails_initial_batch[i].entropy_goal, 
-                                      feature_y=I_scaled)
-        
-        if grails_map_parents[x][y] is None:
-            grails_map_parents[x][y] = grails_initial_batch[i]
-        else:
-            if grails_map_parents[x][y].reward_test < grails_initial_batch[i].reward_test:
-               grails_map_parents[x][y] = grails_initial_batch[i]
-            elif grails_map_parents[x][y].reward == grails_initial_batch[i].reward:
-                if np.random.rand() > 0.5:
-                    grails_map_parents[x][y] = grails_initial_batch[i]
     
+    grails_map = place_individuals_in_grid(grails_initial_batch)    
+    grails = reproduce(grails_map=grails_map, randomizer=randomizer, c_iteration=1)
     
-    grails_offspring = []
-    grails_parents = []   
-    individual = 0
-    for i in range(grails_map_parents.shape[0]):
-        for j in range(grails_map_parents.shape[1]):
-            if grails_map_parents[i][j] is not None:
-                map_spreading[c_iteration][i][j] = grails_map_parents[i][j].agent_id
-                map_reward[c_iteration][i][j] = grails_map_parents[i][j].reward_test
-                grails_parents.append(copy.deepcopy(grails_map_parents[i][j]))       # maybe we do not need deepcopy
-                grails_offspring.append(copy.deepcopy(grails_map_parents[i][j]))
-                genome = grails_offspring[individual].get_softmax_temperature()
-                genome = randomizer.mutate(genome=copy.deepcopy(genome),
-                                           param_A=randomizer.mutation_param_A, 
-                                           param_B=randomizer.mutation_param_B)
-                grails_offspring[individual].set_softmax_temperature(genome)
-                grails_offspring[individual].agent_epoch = c_iteration+1
-                individual += 1
+    for i in range(grails_map.shape[0]):
+        for j in range(grails_map.shape[1]):
+            if grails_map[i][j] is not None:
+                map_spreading[0][i][j] = (grails_map[i][j].agent_id, 
+                                          grails_map[i][j].agent_epoch,
+                                          grails_map[i][j].goal_manager.softmax_temp,
+                                          grails_map[i][j].goal_manager.beta_val)
+                map_reward[0][i][j] = grails_map[i][j].reward_test
+            
+    if MP:
+        for i in range(0,len(grails),N_POOLS):
+            print(i)
+            grails[i:i+N_POOLS], current_epoch = main_fun_MP(grails[i:i+N_POOLS], 
+                                                            current_epoch=current_epoch+1,     
+                                                            epoch_increase=TEST_EVERY,
+                                                            n_pools = N_POOLS)
+    else:
+        grails, current_epoch = main_fun(grails, 
+                                        current_epoch=current_epoch+1,     
+                                        epoch_increase=TEST_EVERY)
+      
+    grails_map = place_individuals_in_grid(grails) 
+    for i in range(grails_map.shape[0]):
+        for j in range(grails_map.shape[1]):
+            if grails_map[i][j] is not None:
+                map_spreading[1][i][j] = (grails_map[i][j].agent_id, 
+                                          grails_map[i][j].agent_epoch,
+                                          grails_map[i][j].goal_manager.softmax_temp,
+                                          grails_map[i][j].goal_manager.beta_val)
+                map_reward[1][i][j] = grails_map[i][j].reward_test
+    
+    '''   
+    
                 
-    # c_iteration += 1
+    c_iteration = 0
     f_name = "test_" + str(c_iteration) + ".npz"
     np.savez(f_name,  
               I_upper_history=np.array(I_upper_history),
@@ -342,3 +367,4 @@ if __name__ == "__main__":
                   map_spreading=map_spreading,
                   grails=grails_parents,
                   allow_pickle=True)
+    '''

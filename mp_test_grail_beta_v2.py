@@ -215,9 +215,9 @@ if __name__ == "__main__":
     
     set_start_method("spawn")
         
-    TEST_EVERY_INITIAL_TRAINING = 30
-    N_ITERATIONS = 50
-    TEST_EVERY = 10
+    TEST_EVERY_INITIAL_TRAINING = 5
+    N_ITERATIONS = 3
+    TEST_EVERY = 5
     
     MP = True
  
@@ -226,8 +226,8 @@ if __name__ == "__main__":
     random.seed(1)
     np.random.seed(1)
 
-    N_AGENTS = 10
-    N_POOLS = 20
+    N_AGENTS = 4
+    N_POOLS = 4
     
     uniform = {"initialization": {"lower bound": 0.01,
                                   "upper bound": 0.99},
@@ -314,7 +314,7 @@ if __name__ == "__main__":
         print(c_iteration)        
         if MP:
             for i in range(0,len(grails),N_POOLS):
-                #print(i)
+                print(i)
                 grails[i:i+N_POOLS], current_epoch = main_fun_MP(grails[i:i+N_POOLS], 
                                                                 current_epoch=current_epoch+1,     
                                                                 epoch_increase=TEST_EVERY,

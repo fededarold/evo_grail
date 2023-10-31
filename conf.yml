@@ -1,0 +1,16 @@
+uniform = {"initialization": {"lower bound": 0.,
+                              "upper bound": 1.},
+            "mutation": {"lower bound": -0.01,
+                          "upper bound": 0.01},
+            "limits": {"min value": 0., 
+                       "max value": 1.}}
+
+
+
+normal = {"initialization": {"mean": 0.,
+                             "std": 0.1},
+            "mutation": {"mean": 0.,
+                         "std": 0.001}}
+                         
+
+
