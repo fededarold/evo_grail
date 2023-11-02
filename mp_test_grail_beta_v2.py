@@ -241,12 +241,13 @@ if __name__ == "__main__":
                                   "upper bound": 0.1},
                     "limits": {"min value": 0.01, 
                                "max value": 0.99}}
-    
+    randomizer_temp = None
     if uniform_temp is not None:
         randomizer_temp = rng.factory_randomizer(distribution="uniform", 
                                                 data_type="python", 
                                                 params=uniform_temp)
-    
+
+    randomizer_beta = None
     if uniform_beta is not None:
         randomizer_beta = rng.factory_randomizer(distribution="uniform", 
                                                 data_type="python", 
