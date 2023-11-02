@@ -250,7 +250,7 @@ if __name__ == "__main__":
     if uniform_beta is not None:
         randomizer_beta = rng.factory_randomizer(distribution="uniform", 
                                                 data_type="python", 
-                                                params=uniform_temp)
+                                                params=uniform_beta)
  
     # t_0 = time.time()
     
