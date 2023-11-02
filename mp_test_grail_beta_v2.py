@@ -221,32 +221,52 @@ if __name__ == "__main__":
     
     MP = True
  
+    MP = True
+    
+    N_AGENTS = 10
+    N_POOLS = 20
+    
+    uniform_temp = None
+    # uniform_temp = {"initialization": {"lower bound": 0.01,
+    #                               "upper bound": 0.99},
+    #                 "mutation": {"lower bound": -0.1,
+    #                               "upper bound": 0.1},
+    #                 "limits": {"min value": 0.01, 
+    #                            "max value": 0.99}}
+    
+    # uniform_beta = None
+    uniform_beta = {"initialization": {"lower bound": 0.01,
+                                  "upper bound": 0.8},
+                    "mutation": {"lower bound": -0.1,
+                                  "upper bound": 0.1},
+                    "limits": {"min value": 0.01, 
+                               "max value": 0.99}}
+    
+    if uniform_temp is not None:
+        randomizer_temp = rng.factory_randomizer(distribution="uniform", 
+                                                data_type="python", 
+                                                params=uniform_temp)
+    
+    if uniform_beta is not None:
+        randomizer_beta = rng.factory_randomizer(distribution="uniform", 
+                                                data_type="python", 
+                                                params=uniform_temp)
+ 
     # t_0 = time.time()
     
     random.seed(1)
     np.random.seed(1)
 
-    N_AGENTS = 10
-    N_POOLS = 20
-    
-    uniform = {"initialization": {"lower bound": 0.01,
-                                  "upper bound": 0.99},
-                "mutation": {"lower bound": -0.1,
-                              "upper bound": 0.1},
-                "limits": {"min value": 0.01, 
-                           "max value": 0.99}}
     
     
     hyperparameter = {"init_agents": N_AGENTS,
                       "initial_training": TEST_EVERY_INITIAL_TRAINING,
                       "test_every": TEST_EVERY,
                       "iterations": N_ITERATIONS,
-                      "randomizer_temperature": uniform,
-                      "randomizer_beta": None}
+                      "randomizer_temperature": uniform_temp,
+                      "randomizer_beta": uniform_beta}
     
-    randomizer = rng.factory_randomizer(distribution="uniform", 
-                                        data_type="python", 
-                                        params=uniform)
+    
 
     
     tot_trials = 0
@@ -262,8 +282,8 @@ if __name__ == "__main__":
     
     # initial batch
     grails = init_population(n_agents=N_AGENTS, 
-                             randomizer_temp=randomizer, 
-                             randomizer_beta=None,
+                             randomizer_temp=randomizer_temp, 
+                             randomizer_beta=randomizer_beta,
                              parallel_execution=MP)
     
     for i in range(len(grails)):
@@ -293,8 +313,8 @@ if __name__ == "__main__":
     
     grails_map = place_individuals_in_grid(grails)    
     grails = reproduce(grails_map=grails_map, 
-                       randomizer_temp=randomizer, 
-                       randomizer_beta=None,
+                       randomizer_temp=randomizer_temp, 
+                       randomizer_beta=randomizer_beta,
                        c_iteration=1)
     map_spreading[0], map_reward[0], map_competence[0], tot_trials = fetch_data(grails_map)
     
@@ -312,9 +332,10 @@ if __name__ == "__main__":
 
     for c_iteration in range(1,N_ITERATIONS):  
         print(c_iteration)        
+        print(len(grails))
         if MP:
             for i in range(0,len(grails),N_POOLS):
-                # print(i)
+                print(i)
                 grails[i:i+N_POOLS], current_epoch = main_fun_MP(grails[i:i+N_POOLS], 
                                                                 current_epoch=current_epoch+1,     
                                                                 epoch_increase=TEST_EVERY,
@@ -337,8 +358,8 @@ if __name__ == "__main__":
         
         grails_map = place_individuals_in_grid(grails)    
         grails = reproduce(grails_map=grails_map, 
-                           randomizer_temp=randomizer,
-                           randomizer_beta=None,
+                           randomizer_temp=randomizer_temp,
+                           randomizer_beta=randomizer_beta,
                            c_iteration=c_iteration)
         map_spreading[c_iteration], map_reward[c_iteration], map_competence[c_iteration], trials = fetch_data(grails_map)
         tot_trials += trials
@@ -365,108 +386,3 @@ if __name__ == "__main__":
               tot_trials=tot_trials,
               hyperparameter=hyperparameter,
               allow_pickle=True)
-    
-    
-    
-    
-    '''   
-    
-                
-    c_iteration = 0
-    f_name = "test_" + str(c_iteration) + ".npz"
-    np.savez(f_name,  
-              I_upper_history=np.array(I_upper_history),
-              I_lower_history=np.array(I_lower_history),
-              map_reward=map_reward,
-              map_spreading=map_spreading,
-              grails=grails_parents,
-              allow_pickle=True)
-    
-    
-        
-    
-    for c_iteration in range(1,N_ITERATIONS):  
-        print(c_iteration)
-        # do parents
-        grails_parents, _ = main_fun(grails_parents, current_epoch=current_epoch+1, epoch_increase=TEST_EVERY) 
-        # do offsprings
-        grails_offspring, current_epoch = main_fun(grails_offspring, current_epoch=current_epoch+1, epoch_increase=TEST_EVERY)
-        
-        # reset the grid
-        grails_map_parents = np.empty((10,10), dtype=object)
-    
-        #get min-max values of the necessary BD dimensions for parents and offspring
-        I_values = []
-        for i in range(len(grails_parents)):
-            I_values.append(grails_parents[i].I_sensors_action)
-        # keep them separate to see if the BD differs
-        for i in range(len(grails_offspring)):
-            I_values.append(grails_offspring[i].I_sensors_action)
-        I_upper_bound = max(I_values)
-        I_lower_bound = min(I_values)
-        
-        I_upper_history.append(I_upper_bound)
-        I_lower_history.append(I_lower_bound)
-        
-        # assess parents
-        for i in range(len(grails_parents)):
-            I_scaled = InfoDiscrete.range_scaler(grails_parents[i].I_sensors_action,
-                                                 I_lower_bound, I_upper_bound)
-            
-            x, y = get_individual_xy_grid(feature_x=grails_parents[i].entropy_goal, 
-                                          feature_y=I_scaled)
-            
-            if grails_map_parents[x][y] is None:
-                grails_map_parents[x][y] = grails_parents[i]
-            else:
-                if grails_map_parents[x][y].reward_test < grails_parents[i].reward_test:
-                   grails_map_parents[x][y] = grails_parents[i]
-                elif grails_map_parents[x][y].reward == grails_parents[i].reward:
-                    if np.random.rand() > 0.5:
-                        grails_map_parents[x][y] = grails_parents[i]
-                        
-        # assess offspring
-        for i in range(len(grails_offspring)):
-            I_scaled = InfoDiscrete.range_scaler(grails_offspring[i].I_sensors_action,
-                                                 I_lower_bound, I_upper_bound)
-            
-            x, y = get_individual_xy_grid(feature_x=grails_offspring[i].entropy_goal, 
-                                          feature_y=I_scaled)
-            
-            if grails_map_parents[x][y] is None:
-                grails_map_parents[x][y] = grails_offspring[i]
-            else:
-                if grails_map_parents[x][y].reward_test < grails_offspring[i].reward_test:
-                   grails_map_parents[x][y] = grails_offspring[i]
-                elif grails_map_parents[x][y].reward == grails_offspring[i].reward:
-                    if np.random.rand() > 0.5:
-                        grails_map_parents[x][y] = grails_parents[i]
-        
-        # reproduce and save data
-        grails_offspring = []
-        grails_parents = []   
-        individual = 0
-        for i in range(grails_map_parents.shape[0]):
-            for j in range(grails_map_parents.shape[1]):
-                if grails_map_parents[i][j] is not None:
-                    map_spreading[c_iteration][i][j] = grails_map_parents[i][j].agent_id
-                    map_reward[c_iteration][i][j] = grails_map_parents[i][j].reward_test
-                    grails_parents.append(copy.deepcopy(grails_map_parents[i][j]))       # maybe we do not need deepcopy
-                    grails_offspring.append(copy.deepcopy(grails_map_parents[i][j]))
-                    genome = grails_offspring[individual].get_softmax_temperature()
-                    genome = randomizer.mutate(genome=copy.deepcopy(genome),
-                                               param_A=randomizer.mutation_param_A, 
-                                               param_B=randomizer.mutation_param_B)
-                    grails_offspring[individual].set_softmax_temperature(genome)
-                    grails_offspring[individual].agent_epoch = c_iteration+1
-                    individual += 1
-        
-        f_name = "test_" + str(c_iteration) + ".npz"
-        np.savez(f_name, 
-                  I_upper_history=np.array(I_upper_history),
-                  I_lower_history=np.array(I_lower_history),
-                  map_reward=map_reward,
-                  map_spreading=map_spreading,
-                  grails=grails_parents,
-                  allow_pickle=True)
-    '''
