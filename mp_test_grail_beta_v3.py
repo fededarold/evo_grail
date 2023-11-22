@@ -235,13 +235,13 @@ if __name__ == "__main__":
     N_AGENTS = 10
     N_POOLS = 20
     
-    # uniform_temp = None
-    uniform_temp = {"initialization": {"lower bound": 0.01,
-                                  "upper bound": 0.99},
-                    "mutation": {"lower bound": -0.1,
-                                  "upper bound": 0.1},
-                    "limits": {"min value": 0.01, 
-                                "max value": 0.99}}
+    uniform_temp = None
+    #uniform_temp = {"initialization": {"lower bound": 0.01,
+    #                              "upper bound": 0.99},
+    #                "mutation": {"lower bound": -0.1,
+    #                              "upper bound": 0.1},
+    #                "limits": {"min value": 0.01, 
+    #                            "max value": 0.99}}
     
     # uniform_beta = None
     uniform_beta = {"initialization": {"lower bound": 0.1,
