@@ -72,7 +72,7 @@ class MOTIVEN(object):
         self.c_epoch = None
         
         self.agent_id = None
-        self.agent_epoch = None
+        self.agent_epoch = []
         
         # np.random.set_state(1)
         np.random.seed(1)
@@ -342,11 +342,12 @@ class MOTIVEN(object):
         
         self.iter_count = 0
 
-    def main(self):
+    def main(self, max_epochs):
         
         # self.time_main_starts = time.time()
         
         self.extrinsic_goal = "ball_1"
+        self.max_epochs = max_epochs
         # self.simulator.restart_scenario()
         
         while self.n_epochs <= self.max_epochs:
@@ -1035,6 +1036,11 @@ class MOTIVEN(object):
         
     def get_beta_val(self):
         return self.goal_manager.get_beta_val()
+    
+    def set_agent_epoch(self, epoch):
+        self.agent_epoch.append(epoch)
+    # def set_max_epochs(self, epoch):
+    #     self.max_epochs=epoch
     
     
     @classmethod
