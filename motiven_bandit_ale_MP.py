@@ -342,12 +342,12 @@ class MOTIVEN(object):
         
         self.iter_count = 0
 
-    def main(self, max_epochs):
+    def main(self):
         
         # self.time_main_starts = time.time()
         
         self.extrinsic_goal = "ball_1"
-        self.max_epochs = max_epochs
+        # self.max_epochs = max_epochs
         # self.simulator.restart_scenario()
         
         while self.n_epochs <= self.max_epochs:
