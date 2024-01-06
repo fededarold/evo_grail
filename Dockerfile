@@ -37,6 +37,7 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
 RUN pip install scipy
 RUN pip install numpy
 RUN pip install matplotlib
+RUN pip install PyYAML
 
 COPY ./ /workspace/
 CMD ["python3","-u","/workspace/main.py"]
