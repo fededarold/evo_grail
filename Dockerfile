@@ -33,6 +33,7 @@ WORKDIR /workspace/
 
 #RUN if [ "python:${PYTHON_VERSION}" = "python:3.6.15" ] ; then pip install .[box2d,classic_control,toy_text,other] pytest=="7.0.1" --no-cache-dir; else pip install .[testing] --no-cache-dir; fi
 RUN pip install gymnasium[all]
+RUN pip install gym[all]
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 RUN pip install scipy
 RUN pip install numpy
