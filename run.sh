@@ -24,6 +24,8 @@ python3 run_experiment_population_2024.py --timestamp 1652780483 --individual_id
 python3 run_experiment_population_2024.py --timestamp 1652781484 --individual_id 0 &
 python3 run_experiment_population_2024.py --timestamp 1652781484 --individual_id 1 &
 
+wait
+
 python3 run_experiment_population_2024.py --timestamp 1652780485 --individual_id 0 &
 python3 run_experiment_population_2024.py --timestamp 1652780485 --individual_id 1 &
 python3 run_experiment_population_2024.py --timestamp 1652780485 --individual_id 2 &
